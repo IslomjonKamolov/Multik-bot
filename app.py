@@ -13,6 +13,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 create_table()
+print('I AM RUNNING')
 
 
 @dp.message(CommandStart())
