@@ -39,24 +39,19 @@ def create_channel_buttons():
 
 
 create_table()
-print("I AM RUNNING")
 
 
 async def is_subscribe(message):
     response = await check_channel(userId=message.from_user.id, bot=bot)
-    print(response)
     if response:
-        print("Welcome")
         return True
     else:
-        print("Go away bitch")
         return False
 
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
     is_subscribed = await is_subscribe(message=message)
-    print(is_subscribed)
 
     if not is_subscribed:
         keyboard_builder = InlineKeyboardBuilder()
@@ -133,7 +128,6 @@ async def remove_channel_fun(callback: types.CallbackQuery):
     if callback.from_user.id in ADMIN_ID:
         # `callback.data` dan kanal indeksini olish
         channel_index = int(callback.data.split("_")[1])
-        print(channel_index)
 
         if 0 <= channel_index < len(CHANNELS):
             removed_channel = CHANNELS.pop(channel_index)
@@ -194,7 +188,6 @@ async def new_channel_confirmation(message: types.Message, state: FSMContext):
     data = await state.get_data()
     channel_url = data.get("new_channel")
     CHANNELS.append(channel_url)
-    print(CHANNELS)
     await message.answer(
         f"siz kiritgan kanal: {channel_url}.", reply_markup=ReplyKeyboardRemove()
     )
@@ -278,7 +271,6 @@ async def confirm_cancel(callback: types.CallbackQuery, state: FSMContext):
 @dp.message()
 async def check_code(message: types.Message):
     is_subscribed = await is_subscribe(message=message)
-    print(is_subscribed)
 
     if not is_subscribed:
         keyboard_builder = InlineKeyboardBuilder()
