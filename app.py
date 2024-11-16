@@ -27,15 +27,15 @@ class ChannelCallback(CallbackData, prefix="channel"):
     url: str
 
 
-
 def create_channel_buttons():
     keyboard_builder = InlineKeyboardBuilder()
     for index, channel_url in enumerate(CHANNELS):
         channel_name = channel_url.replace("https://t.me/", "")
         # `callback_data` sifatida faqat unikal identifikator yoki indeksdan foydalanamiz
-        keyboard_builder.button(text=f"❌ {channel_name}", callback_data=f"remove_{index}")
+        keyboard_builder.button(
+            text=f"❌ {channel_name}", callback_data=f"remove_{index}"
+        )
     return keyboard_builder.adjust(1).as_markup()
-
 
 
 create_table()
@@ -51,22 +51,27 @@ async def is_subscribe(message):
 
 @dp.message(CommandStart())
 async def start(message: types.Message):
-    is_subscribed = await is_subscribe(message=message)
+    try:
+        is_subscribed = await is_subscribe(message=message)
 
-    if not is_subscribed:
-        keyboard_builder = InlineKeyboardBuilder()
-        for channel_url in CHANNELS:
-            channel_name = channel_url.replace("https://t.me/", "")
-            keyboard_builder.button(text=channel_name, url=channel_url)
+        if not is_subscribed:
+            keyboard_builder = InlineKeyboardBuilder()
+            for channel_url in CHANNELS:
+                channel_name = channel_url.replace("https://t.me/", "")
+                keyboard_builder.button(text=channel_name, url=channel_url)
 
+            await message.answer(
+                "Siz kanallarga obuna bo'lmagan ko'rinasiz. Iltimos barcha kanallarga obuna bo'ling!!!",
+                reply_markup=keyboard_builder.adjust(1).as_markup(),
+            )
+            return
+    except Exception as e:
         await message.answer(
-            "Siz kanallarga obuna bo'lmagan ko'rinasiz. Iltimos barcha kanallarga obuna bo'ling!!!",
-            reply_markup=keyboard_builder.adjust(1).as_markup(),
+            "⛔️ Nimadur xato. Iltimos berilga kanallar to'g'ri yoki bor ekanini va menga admin huquqlari berilganini tekshirib ko'ring!!!\nAgar admin bo'lmasangiz iltimos adminlarga xabar bering!!!"
         )
-        return
 
     await message.answer(
-        f"Salom {message.from_user.full_name}!\n\nMen sizga multfilm yuboraman. Buning uchun menga multfilm kodini yuboring!"
+        f"Salom {message.from_user.full_name} 🖐\n\nMen sizga multfilm yuboraman. Buning uchun menga multfilm kodini yuboring!"
     )
 
 
@@ -121,7 +126,10 @@ async def new_channel_fun(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(lambda c: c.data == "delete_channel")
 async def delete_channel_handler(callback: types.CallbackQuery, state: FSMContext):
     if callback.from_user.id in ADMIN_ID:
-        await callback.message.answer("Kanalni tanlang:", reply_markup=create_channel_buttons())
+        await callback.message.answer(
+            "Kanalni tanlang:", reply_markup=create_channel_buttons()
+        )
+
 
 @dp.callback_query(lambda c: c.data.startswith("remove_"))
 async def remove_channel_fun(callback: types.CallbackQuery):
@@ -138,11 +146,11 @@ async def remove_channel_fun(callback: types.CallbackQuery):
         # Yangi ro'yxatni ko'rsatish
         if CHANNELS:
             await callback.message.answer(
-                "Qolgan kanallar:",
-                reply_markup=create_channel_buttons()
+                "Qolgan kanallar:", reply_markup=create_channel_buttons()
             )
         else:
             await callback.message.answer("Hozircha kanallar ro'yxati bo'sh.")
+
 
 @dp.callback_query(ChannelCallback.filter())
 async def delete_channel_callback(
@@ -172,13 +180,13 @@ async def delete_channel_callback(
 async def new_channel(message: types.Message, state: FSMContext):
     url = message.text
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="ha")], [KeyboardButton(text="yo'q")]],
+        keyboard=[[KeyboardButton(text="Ha ✅"), KeyboardButton(text="Yo'q ❌")]],
         resize_keyboard=True,
         one_time_keyboard=True,
     )
     await state.update_data(new_channel=url)
     await message.answer(
-        f"Haqiqatdan ham {url} urlni qo'shmoqchimisiz?", reply_markup=keyboard
+        f"Haqiqatdan ham {url} urlni qo'shmoqchimisiz❔", reply_markup=keyboard
     )
     await state.set_state(AdminStates.confirm_channel)
 
@@ -189,7 +197,7 @@ async def new_channel_confirmation(message: types.Message, state: FSMContext):
     channel_url = data.get("new_channel")
     CHANNELS.append(channel_url)
     await message.answer(
-        f"siz kiritgan kanal: {channel_url}.", reply_markup=ReplyKeyboardRemove()
+        f"Siz kiritgan kanal: {channel_url}.", reply_markup=ReplyKeyboardRemove()
     )
     await state.clear()
 
@@ -200,7 +208,7 @@ async def enter_code(message: types.Message, state: FSMContext):
     code = message.text
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Boshqa kod kiritish", callback_data="new_code")]
+            [InlineKeyboardButton(text="Boshqa kod kiritish 🔄", callback_data="new_code")]
         ]
     )
     # Tekshirish: kod avvaldan mavjudmi
@@ -228,8 +236,8 @@ async def enter_url(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="Ha", callback_data="confirm_yes"),
-                InlineKeyboardButton(text="Yo'q", callback_data="confirm_no"),
+                InlineKeyboardButton(text="Ha ✅", callback_data="confirm_yes"),
+                InlineKeyboardButton(text="Yo'q ❌", callback_data="confirm_no"),
             ]
         ]
     )
@@ -250,7 +258,7 @@ async def confirm_save(callback: types.CallbackQuery, state: FSMContext):
 
     # Kod va URL'ni saqlash
     add_code(code, url)
-    await callback.message.answer("Kod va URL saqlandi!")
+    await callback.message.answer("Kod va URL saqlandi✅")
     # Boshqa adminlarga xabar yuborish
     for admin_id in ADMIN_ID:
         if admin_id != callback.from_user.id:
@@ -263,30 +271,35 @@ async def confirm_save(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(AdminStates.confirm, lambda c: c.data == "confirm_no")
 async def confirm_cancel(callback: types.CallbackQuery, state: FSMContext):
-    await callback.message.answer("Bekor qilindi.")
+    await callback.message.answer("Bekor qilindi🛑")
     await state.clear()
 
 
 # Foydalanuvchi tomonidan kod yuborilganda
 @dp.message()
 async def check_code(message: types.Message):
-    is_subscribed = await is_subscribe(message=message)
+    try:
+        is_subscribed = await is_subscribe(message=message)
 
-    if not is_subscribed:
-        keyboard_builder = InlineKeyboardBuilder()
-        for channel_url in CHANNELS:
-            channel_name = channel_url.replace("https://t.me/", "")
-            keyboard_builder.button(text=channel_name, url=channel_url)
+        if not is_subscribed:
+            keyboard_builder = InlineKeyboardBuilder()
+            for channel_url in CHANNELS:
+                channel_name = channel_url.replace("https://t.me/", "")
+                keyboard_builder.button(text=channel_name, url=channel_url)
 
+            await message.answer(
+                "Siz kanallarga obuna bo'lmagan ko'rinasiz. Iltimos barcha kanallarga obuna bo'ling!!!",
+                reply_markup=keyboard_builder.adjust(1).as_markup(),
+            )
+            return
+    except Exception as e:
         await message.answer(
-            "Siz kanallarga obuna bo'lmagan ko'rinasiz. Iltimos barcha kanallarga obuna bo'ling!!!",
-            reply_markup=keyboard_builder.adjust(1).as_markup(),
+            "Nimadur xato. Iltimos berilga kanallar to'g'ri yoki bor ekanini va menga admin huquqlari berilganini tekshirib ko'ring!!!\nAgar admin bo'lmasangiz iltimos adminlarga xabar bering!!!"
         )
-        return
     code = message.text
     url = get_url_by_code(code)
     if url:
-        await message.answer(f"👇👇👇 Multfilm mana bu yerda 👇👇👇\n{url}")
+        await message.answer(f"👇👇👇 Multfilm mana bu yerda 👇👇👇\n      {url}")
     else:
         await message.answer(
             "Bunday kod topilmadi. Iltimos yaxshilab tekshirib ko'ring."
